@@ -3,7 +3,7 @@ require 'yajl' unless defined?(Yajl)
 module ApnMachine
   class Notification
 
-    attr_accessor :device_token, :alert, :badge, :sound, :custom
+    attr_accessor :device_token, :alert, :badge, :sound, :custom, :queue
 
     PAYLOAD_MAX_BYTES = 256
     class PayloadTooLarge < StandardError;end
@@ -27,7 +27,11 @@ module ApnMachine
 
     def push
       raise 'No Redis client' if Config.redis.nil?
-      socket = Config.redis.rpush "apnmachine.queue", encode_payload
+      socket = Config.redis.rpush queue, encode_payload
+    end
+
+    def queue
+      @queue || 'apnmachine.queue'
     end
 
     def self.to_bytes(encoded_payload)

@@ -1,9 +1,9 @@
 module ApnMachine
   module Server
     class Server
-        attr_accessor :client, :bind_address, :port, :redis
+        attr_accessor :client, :bind_address, :port, :redis, :redis_queue
 
-      def initialize(pem, pem_passphrase = nil, redis_host = '127.0.0.1', redis_port = 6379, redis_uri = nil, apn_host = 'gateway.push.apple.com', apn_port = 2195, log = '/apnmachined.log')
+      def initialize(pem, pem_passphrase = nil, redis_host = '127.0.0.1', redis_port = 6379, redis_uri = nil, apn_host = 'gateway.push.apple.com', apn_port = 2195, log = '/apnmachined.log', redis_queue = 'apnmachine.queue')
         @client = ApnMachine::Server::Client.new(pem, pem_passphrase, apn_host, apn_port)
         if redis_uri
           uri = URI.parse(redis_uri)
@@ -24,7 +24,8 @@ module ApnMachine
   	      @flog = File.open(log, File::WRONLY | File::APPEND | File::CREAT)
           Config.logger = Logger.new(@flog, 'daily')
         end
-    
+
+        self.redis_queue = redis_queue
       end
 
       def start!
@@ -36,7 +37,7 @@ module ApnMachine
       
           Config.logger.info "Starting APN Server on Redis"
           loop do  
-            notification = @redis.blpop("apnmachine.queue", 0)[1]
+            notification = @redis.blpop(redis_queue, 0)[1]
             retries = 2
         
             begin
